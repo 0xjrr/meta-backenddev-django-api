@@ -19,6 +19,9 @@ class Cart(models.Model):
     unit_price = models.DecimalField(max_digits=6, decimal_places=2)
     price = models.DecimalField(max_digits=6, decimal_places=2)
 
+    class Meta:
+        unique_together = ('user', 'menuitem')
+
 class Order(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     delivery_crew = models.ForeignKey(User, on_delete=models.CASCADE)

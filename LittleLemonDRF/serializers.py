@@ -4,14 +4,14 @@ from .models import * # temporary, change at end
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ['slug', 'title']
+        fields = ['id', 'slug', 'title']
 
 class MenuItemSerializer(serializers.ModelSerializer):
     category = CategorySerializer()
 
     class Meta:
         model = MenuItem
-        fields = ['title', 'price', 'featured', 'category']
+        fields = ['id', 'title', 'price', 'featured', 'category']
 
     def create(self, validated_data):
         category_data = validated_data.pop('category')

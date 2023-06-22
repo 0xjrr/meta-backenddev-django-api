@@ -8,10 +8,16 @@ from .serializers import * # temporary, change at end
 class MenuItems(viewsets.ViewSet):
 	
     def list(self, request):
-        return Response({"message":"All instances"}, status.HTTP_200_OK)
+        queryset = MenuItem.objects.all()
+        serializer = MenuItemSerializer(queryset, many=True)
+        return Response(serializer.data)
 	
     def create(self, request):
-        return Response({"message":"Creating an instance"}, status.HTTP_201_CREATED)
+        serializer = MenuItemSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 	
     def update(self, request, pk=None):
         return Response({"message":"Updating an instance"}, status.HTTP_200_OK)

@@ -21,8 +21,14 @@ class MenuItems(viewsets.ViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 	
     def update(self, request, pk=None):
-        return Response({"message":"Updating an instance"}, status.HTTP_200_OK)
-	
+        queryset = MenuItem.objects.all()
+        item = get_object_or_404(queryset, pk=pk)
+        serializer = MenuItemSerializer(item, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     def retrieve(self, request, pk=None):
         queryset = MenuItem.objects.all()
         item = get_object_or_404(queryset, pk=pk)
@@ -30,7 +36,16 @@ class MenuItems(viewsets.ViewSet):
         return Response(serializer.data)
 	
     def partial_update(self, request, pk=None):
-        return Response({"message":"Partially updating an instance"}, status.HTTP_200_OK)
-	
+        queryset = MenuItem.objects.all()
+        item = get_object_or_404(queryset, pk=pk)
+        serializer = MenuItemSerializer(item, data=request.data, partial=True) # Set partial=True to update a data partially
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     def destroy(self, request, pk=None):
-        return Response({"message":"Deleting an instance"}, status.HTTP_200_OK)
+        queryset = MenuItem.objects.all()
+        item = get_object_or_404(queryset, pk=pk)
+        item.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

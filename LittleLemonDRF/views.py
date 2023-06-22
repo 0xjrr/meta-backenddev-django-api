@@ -1,6 +1,7 @@
 from rest_framework import generics, viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
 from .models import * # temporary, change at end
 from .serializers import * # temporary, change at end
 
@@ -23,7 +24,10 @@ class MenuItems(viewsets.ViewSet):
         return Response({"message":"Updating an instance"}, status.HTTP_200_OK)
 	
     def retrieve(self, request, pk=None):
-        return Response({"message":"Displaying an instance"}, status.HTTP_200_OK)
+        queryset = MenuItem.objects.all()
+        item = get_object_or_404(queryset, pk=pk)
+        serializer = MenuItemSerializer(item)
+        return Response(serializer.data)
 	
     def partial_update(self, request, pk=None):
         return Response({"message":"Partially updating an instance"}, status.HTTP_200_OK)

@@ -1,6 +1,7 @@
 from rest_framework import generics, viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from django.contrib.auth.models import Group
 from django.shortcuts import get_object_or_404
 from .models import * # temporary, change at end
 from .serializers import * # temporary, change at end
@@ -91,3 +92,71 @@ class CartViewSet(viewsets.ViewSet):
     def delete(self, request, pk=None):
         Cart.objects.filter(user=request.user).delete()
         return Response(status=204)
+
+class ManagerGroupViewSet(viewsets.GenericViewSet):
+    serializer_class = UserSerializer
+
+    def get_queryset(self):
+        group = Group.objects.get(name="manager")
+        return group.user_set.all()
+
+    # GET /api/groups/manager/users
+    def list(self, request):
+        group = get_object_or_404(Group, name="manager")
+        serializer = self.serializer_class(group.user_set.all(), many=True)
+        return Response(serializer.data)
+
+    # POST /api/groups/manager/users
+    def create(self, request):
+        group = get_object_or_404(Group, name="manager")
+        username = request.data.get('username')
+        user = get_object_or_404(User, username=username)
+        group.user_set.add(user)
+        return Response({'status': 'User added to manager group'}, status=status.HTTP_201_CREATED)
+    # GET /api/groups/manager/users/{userId}
+    def retrieve(self, request, pk=None):
+        group = get_object_or_404(Group, name="manager")
+        user = get_object_or_404(group.user_set, pk=pk)
+        serializer = UserSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    # DELETE /api/groups/manager/users/{userId}
+    def destroy(self, request, pk=None):
+        group = get_object_or_404(Group, name="manager")
+        user = get_object_or_404(User, pk=pk)
+        group.user_set.remove(user)
+        return Response({'status': 'User removed from manager group'}, status=status.HTTP_200_OK)
+
+class DeliveryCrewGroupViewSet(viewsets.GenericViewSet):
+    serializer_class = UserSerializer
+
+    def get_queryset(self):
+        group = Group.objects.get(name="delivery_crew")
+        return group.user_set.all()
+
+    # GET /api/groups/delivery-crew/users
+    def list(self, request):
+        group = get_object_or_404(Group, name="delivery_crew")
+        serializer = self.serializer_class(group.user_set.all(), many=True)
+        return Response(serializer.data)
+
+    # POST /api/groups/delivery-crew/users
+    def create(self, request):
+        group = get_object_or_404(Group, name="delivery_crew")
+        username = request.data.get('username')
+        user = get_object_or_404(User, username=username)
+        group.user_set.add(user)
+        return Response({'status': 'User added to delivery-crew group'}, status=status.HTTP_201_CREATED)
+    # GET /api/groups/delivery-crew/users/{userId}
+    def retrieve(self, request, pk=None):
+        group = get_object_or_404(Group, name="delivery_crew")
+        user = get_object_or_404(group.user_set, pk=pk)
+        serializer = UserSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    # DELETE /api/groups/delivery-crew/users/{userId}
+    def destroy(self, request, pk=None):
+        group = get_object_or_404(Group, name="delivery_crew")
+        user = get_object_or_404(User, pk=pk)
+        group.user_set.remove(user)
+        return Response({'status': 'User removed from manager group'}, status=status.HTTP_200_OK)

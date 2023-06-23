@@ -57,6 +57,36 @@ class CartViewSet(viewsets.ViewSet):
         serializer = CartSerializer(queryset, many=True)
         return Response(serializer.data)
 
+    def create(self, request):
+        menuitem_id = request.data.get('menuitem')
+        quantity = request.data.get('quantity', 1)
+
+        if quantity < 0:
+            return Response({'error': 'Quantity cannot be negative'}, status=400)
+
+        if menuitem_id is not None:
+            cart_item, created = Cart.objects.get_or_create(
+                user=request.user,
+                menuitem_id=menuitem_id,
+                defaults={'quantity': quantity},
+            )
+
+            if quantity == 0:
+                cart_item.delete()
+                return Response(status=204)
+
+            if not created:
+                cart_item.quantity = quantity
+                cart_item.save()
+
+            serializer = CartSerializer(cart_item, context={'request': request})
+            return Response(serializer.data, status=201 if created else 200)
+
+        serializer = CartSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save(user=request.user)
+            return Response(serializer.data, status=201)
+        return Response(serializer.errors, status=400)
 
     def delete(self, request, pk=None):
         Cart.objects.filter(user=request.user).delete()

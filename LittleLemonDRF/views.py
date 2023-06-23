@@ -49,3 +49,11 @@ class MenuItems(viewsets.ViewSet):
         item = get_object_or_404(queryset, pk=pk)
         item.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+class CartViewSet(viewsets.ViewSet):
+
+    def list(self, request):
+        queryset = Cart.objects.filter(user=request.user)
+        serializer = CartSerializer(queryset, many=True)
+        return Response(serializer.data)
+

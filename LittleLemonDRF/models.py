@@ -30,13 +30,13 @@ class Cart(models.Model):
 
 class Order(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    # delivery_crew = models.ForeignKey(User, on_delete=models.CASCADE)
+    delivery_crew = models.ForeignKey(User, on_delete=models.CASCADE, related_name='delivery_crew', null=True)
     status = models.BooleanField(db_index=True, default=0) #indexed
     total = models.DecimalField(max_digits=6, decimal_places=2)
     date = models.DateField(db_index=True)
 
 class OrderItem(models.Model):
-    order = models.ForeignKey(User, on_delete=models.CASCADE)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE)
     menuitem = models.ForeignKey(MenuItem, on_delete=models.CASCADE)
     quantity = models.SmallIntegerField()
     unit_price = models.DecimalField(max_digits=6, decimal_places=2)

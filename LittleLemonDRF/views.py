@@ -160,3 +160,64 @@ class DeliveryCrewGroupViewSet(viewsets.GenericViewSet):
         user = get_object_or_404(User, pk=pk)
         group.user_set.remove(user)
         return Response({'status': 'User removed from manager group'}, status=status.HTTP_200_OK)
+    
+class OrderViewSet(viewsets.ModelViewSet):
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        # If the user is a manager, return all orders
+        if user.groups.filter(name="manager").exists():
+            return Order.objects.all()
+
+        # If the user is a delivery crew, return all orders for that delivery crew
+        if user.groups.filter(name="delivery_crew").exists():
+            return Order.objects.filter(delivery_crew=user)
+
+        # If the user is a customer, return all orders for that customer
+        if user.groups.filter(name="customer").exists():  # Customer
+            return Order.objects.filter(user=user)
+
+    def create(self, request):
+        user = request.user
+
+        if user.groups.filter(name="customer").exists():
+            cart = Cart.objects.get(user=user)
+            order = Order.objects.create(user=user, total=cart.get_total())
+            for item in cart.items.all():
+                OrderItem.objects.create(
+                    order=order,
+                    menuitem=item.menuitem,
+                    quantity=item.quantity,
+                    unit_price=item.menuitem.price,
+                    price=item.menuitem.price * item.quantity
+                )
+            cart.clear()
+            return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
+        
+        return Response({'detail': 'Only customers can create orders.'}, status=status.HTTP_403_FORBIDDEN)
+
+    def update(self, request, pk=None):
+        user = request.user
+        order = self.get_object()
+        
+        if user.groups.filter(name="manager").exists():
+            serializer = self.get_serializer(order, data=request.data)
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+            return Response(serializer.data)
+        
+        if user.groups.filter(name="delivery_crew").exists() and 'status' in request.data:
+            order.status = request.data['status']
+            order.save()
+            return Response(OrderSerializer(order).data)
+        
+        return Response({'detail': 'You do not have permission to update this order.'}, status=status.HTTP_403_FORBIDDEN)
+
+    def destroy(self, request, pk=None):
+        user = request.user
+        if user.groups.filter(name="manager").exists():
+            return super().destroy(request, pk)
+        
+        return Response({'detail': 'Only managers can delete orders.'}, status=status.HTTP_403_FORBIDDEN)

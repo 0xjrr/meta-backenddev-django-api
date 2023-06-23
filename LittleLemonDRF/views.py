@@ -57,3 +57,7 @@ class CartViewSet(viewsets.ViewSet):
         serializer = CartSerializer(queryset, many=True)
         return Response(serializer.data)
 
+
+    def delete(self, request, pk=None):
+        Cart.objects.filter(user=request.user).delete()
+        return Response(status=204)

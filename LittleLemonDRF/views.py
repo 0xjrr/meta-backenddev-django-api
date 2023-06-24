@@ -5,7 +5,7 @@ from django.contrib.auth.models import Group
 from django.shortcuts import get_object_or_404
 from .models import * # temporary, change at end
 from .serializers import * # temporary, change at end
-
+import datetime
 
 class MenuItems(viewsets.ViewSet):
 
@@ -84,6 +84,7 @@ class CartViewSet(viewsets.ViewSet):
             return Response(serializer.data, status=201 if created else 200)
 
         serializer = CartSerializer(data=request.data, context={'request': request})
+        
         if serializer.is_valid():
             serializer.save(user=request.user)
             return Response(serializer.data, status=201)
@@ -179,24 +180,44 @@ class OrderViewSet(viewsets.ModelViewSet):
         if user.groups.filter(name="customer").exists():  # Customer
             return Order.objects.filter(user=user)
 
+    def list(self, request):
+        queryset = self.get_queryset()
+        serializer = OrderSerializer(queryset, many=True)
+        return Response(serializer.data)
+    
     def create(self, request):
         user = request.user
 
         if user.groups.filter(name="customer").exists():
-            cart = Cart.objects.get(user=user)
-            order = Order.objects.create(user=user, total=cart.get_total())
-            for item in cart.items.all():
+            cart_items = Cart.objects.filter(user=user)
+            
+            if not cart_items.exists():
+                return Response({'detail': 'No active cart found.'}, status=status.HTTP_400_BAD_REQUEST)
+           
+            total = cart_items.aggregate(
+                total=models.Sum(models.F('menuitem__price') * models.F('quantity'), output_field=models.DecimalField())
+            )['total']
+
+            order = Order.objects.create(user=user, total=total, date=datetime.date.today())
+
+            for item in cart_items:
                 OrderItem.objects.create(
                     order=order,
                     menuitem=item.menuitem,
-                    quantity=item.quantity,
-                    unit_price=item.menuitem.price,
-                    price=item.menuitem.price * item.quantity
+                    quantity=item.quantity
                 )
-            cart.clear()
+            
+            cart_items.delete()
+
             return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
         
         return Response({'detail': 'Only customers can create orders.'}, status=status.HTTP_403_FORBIDDEN)
+
+    def retrieve(self, request, pk=None):
+        queryset = self.get_queryset()
+        order = get_object_or_404(queryset, pk=pk)
+        serializer = OrderSerializer(order)
+        return Response(serializer.data)
 
     def update(self, request, pk=None):
         user = request.user

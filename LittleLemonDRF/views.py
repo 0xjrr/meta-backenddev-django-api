@@ -5,7 +5,7 @@ from django.contrib.auth.models import Group
 from django.shortcuts import get_object_or_404
 from .models import * # temporary, change at end
 from .serializers import * # temporary, change at end
-from .permissions import IsManager, IsCrew
+from .permissions import IsManager, IsCrew, IsCustomer
 import datetime
 
 class MenuItems(viewsets.ViewSet):
@@ -53,7 +53,8 @@ class MenuItems(viewsets.ViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class CartViewSet(viewsets.ViewSet):
-
+    permission_classes = [IsCustomer]
+    
     def list(self, request):
         queryset = Cart.objects.filter(user=request.user)
         serializer = CartSerializer(queryset, many=True)

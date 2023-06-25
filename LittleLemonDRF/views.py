@@ -1,4 +1,4 @@
-from rest_framework import generics, viewsets, status
+from rest_framework import permissions, viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth.models import Group
@@ -10,6 +10,20 @@ import datetime
 
 class MenuItems(viewsets.ViewSet):
 
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            permission_classes = [IsManager]
+        else:
+            permission_classes = [IsManager, IsCrew, IsCustomer]
+        return [permission() for permission in permission_classes]  
+    
+    def check_permissions(self, request):
+        for permission in self.get_permissions():
+            if permission.has_permission(request, self):
+                break
+        else:
+            self.permission_denied(request, message=getattr(permission, 'message', None))
+    
     def list(self, request):
         queryset = MenuItem.objects.all()
         serializer = MenuItemSerializer(queryset, many=True)
@@ -54,7 +68,7 @@ class MenuItems(viewsets.ViewSet):
 
 class CartViewSet(viewsets.ViewSet):
     permission_classes = [IsCustomer]
-    
+
     def list(self, request):
         queryset = Cart.objects.filter(user=request.user)
         serializer = CartSerializer(queryset, many=True)

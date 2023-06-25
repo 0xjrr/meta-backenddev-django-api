@@ -3,6 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth.models import Group
 from django.shortcuts import get_object_or_404
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from .models import * # temporary, change at end
 from .serializers import * # temporary, change at end
 from .permissions import IsManager, IsCrew, IsCustomer
@@ -25,9 +26,48 @@ class MenuItems(viewsets.ViewSet):
             self.permission_denied(request, message=getattr(permission, 'message', None))
     
     def list(self, request):
+        ordering = request.query_params.get('ordering')
+        perpage = request.query_params.get('perpage', default=5)
+        page = request.query_params.get('page', default=1)
+
+        try:
+            perpage = int(perpage)
+        except ValueError:
+            return Response('Items perpage must be an integer.')
+        
+        if perpage<0 or perpage>10:
+            return Response('Items perpage cannot be greater than 10 and need to be higher than 0.')
+
+        try:
+            page = int(page)
+        except ValueError:
+            return Response('Page must be an integer.')
+        
+
         queryset = MenuItem.objects.all()
-        serializer = MenuItemSerializer(queryset, many=True)
-        return Response(serializer.data)
+        
+        if ordering:
+            queryset = queryset.order_by(ordering)
+        
+
+        paginator = Paginator(queryset, int(perpage))
+
+        try:
+            items = paginator.page(int(page))
+        except PageNotAnInteger:
+            items = paginator.page(1)
+        except EmptyPage:
+            items = []
+
+        serializer = MenuItemSerializer(items, many=True)
+        return Response({
+            'count': paginator.count,
+            'total_pages': paginator.num_pages,
+            'current_page': page,
+            'next_page': items.has_next() if items else False,
+            'prev_page': items.has_previous() if items else False,
+            'results': serializer.data,
+        })
 
     def create(self, request):
         serializer = MenuItemSerializer(data=request.data)

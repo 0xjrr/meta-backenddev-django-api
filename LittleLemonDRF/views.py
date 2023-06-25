@@ -5,6 +5,7 @@ from django.contrib.auth.models import Group
 from django.shortcuts import get_object_or_404
 from .models import * # temporary, change at end
 from .serializers import * # temporary, change at end
+from .permissions import IsManager, IsCrew
 import datetime
 
 class MenuItems(viewsets.ViewSet):
@@ -96,6 +97,7 @@ class CartViewSet(viewsets.ViewSet):
 
 class ManagerGroupViewSet(viewsets.GenericViewSet):
     serializer_class = UserSerializer
+    permission_classes = [IsManager]
 
     def get_queryset(self):
         group = Group.objects.get(name="manager")
@@ -130,6 +132,7 @@ class ManagerGroupViewSet(viewsets.GenericViewSet):
 
 class DeliveryCrewGroupViewSet(viewsets.GenericViewSet):
     serializer_class = UserSerializer
+    permission_classes = [IsCrew]
 
     def get_queryset(self):
         group = Group.objects.get(name="delivery_crew")
@@ -237,8 +240,13 @@ class OrderViewSet(viewsets.ModelViewSet):
         return Response({'detail': 'You do not have permission to update this order.'}, status=status.HTTP_403_FORBIDDEN)
 
     def destroy(self, request, pk=None):
-        user = request.user
+        user = self.request.user
         if user.groups.filter(name="manager").exists():
-            return super().destroy(request, pk)
-        
+            try:
+                order = Order.objects.get(pk=pk)
+                order.delete()
+                return Response({'detail': 'Order has been deleted.'}, status=status.HTTP_204_NO_CONTENT)
+            except Order.DoesNotExist:
+                return Response({'detail': 'Order not found.'}, status=status.HTTP_404_NOT_FOUND)
+
         return Response({'detail': 'Only managers can delete orders.'}, status=status.HTTP_403_FORBIDDEN)
